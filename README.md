@@ -17,6 +17,31 @@ Fritzing est open-source (GPLv3) : seul le binaire pré-compilé est payant. Ce 
 2. Télécharger l'archive de son système : macOS (Apple Silicon / Intel), Windows ou Linux.
 3. Décompresser et lancer Fritzing. (Pas de licence à payer.)
 
+### macOS — première ouverture (app **non notarisée**)
+
+Ces builds ne sont **ni signés ni notarisés** (pas de compte Apple Developer payant).
+macOS (Gatekeeper) bloquera donc le **premier** lancement. Deux façons de débloquer :
+
+**A. Le plus fiable — Terminal** (retire la mise en quarantaine) :
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Fritzing.app
+```
+
+(adapter le chemin si l'app n'est pas encore déplacée dans `/Applications`).
+
+**B. Interface** : double-cliquer l'app → le message « impossible à ouvrir » apparaît →
+**Réglages Système ▸ Confidentialité et sécurité** → bouton **« Ouvrir quand même »** →
+relancer l'app et confirmer.
+
+> Une fois débloquée, l'app s'ouvre normalement les fois suivantes. C'est attendu pour un
+> logiciel libre auto-compilé, ce n'est pas un problème de sécurité.
+
+### Windows — avertissement SmartScreen
+
+Binaire non signé → SmartScreen peut afficher « Windows a protégé votre PC » :
+**Informations complémentaires ▸ Exécuter quand même**.
+
 ## Statut
 
 **Phase 1** (en cours) : compiler l'upstream **tel quel** pour les 3 OS → Releases.

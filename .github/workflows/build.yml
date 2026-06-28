@@ -94,6 +94,9 @@ jobs:
       # --- Packaging (MVP : déployer Qt + bundler les pièces + archiver) ---
       # Proprement : tools/deploy_fritzing_mac.sh · tools/linux_release_script ·
       # tools/build-windows.bat  (TODO Phase 1.1 : produire .dmg / AppImage / installeur).
+      #
+      # macOS : pas de codesign ni notarisation (pas de compte Apple Developer payant).
+      # Les binaires sortent NON SIGNÉS → instructions de déblocage Gatekeeper dans le README.
       - name: Package
         run: |
           mkdir -p dist
