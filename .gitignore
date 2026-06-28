@@ -1,0 +1,22 @@
+# Sources Fritzing récupérées par la CI (jamais commitées ici)
+/fritzing-app/
+/fritzing-parts/
+
+# Sorties de build / packaging
+/dist/
+/build/
+/artifacts/
+*.dmg
+*.AppImage
+*.exe
+*.zip
+*.tar.gz
+
+# Qt / système
+*.o
+*.obj
+moc_*
+ui_*
+.DS_Store
+.qmake.stash
+Makefile

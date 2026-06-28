@@ -1,0 +1,125 @@
+name: build
+
+# Phase 1 — compile Fritzing (upstream, sans modification) pour macOS / Windows / Linux
+# et publie les binaires en artefacts (puis Release sur tag). Les étudiants téléchargent,
+# zéro build, zéro paiement.
+#
+# ⚠️ SCAFFOLD : ce workflow est une base de départ. Le build de Fritzing est sensible aux
+#    versions ; chaque job demandera 1–2 itérations pour passer (deps manquantes, chemins).
+#    On débogue job par job au premier run CI. Les TODO marquent les points à ajuster.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  # Versions épinglées pour des builds reproductibles (à bumper consciemment).
+  FRITZING_REF: CD-625        # tag fritzing-app  (TODO: figer sur un tag validé)
+  PARTS_REF: develop          # branche fritzing-parts
+  QT_VERSION: 6.5.3
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false        # un OS qui casse ne stoppe pas les autres
+      matrix:
+        include:
+          - { os: ubuntu-22.04,  name: linux }
+          - { os: macos-14,      name: macos-arm64 }   # Apple Silicon
+          - { os: macos-13,      name: macos-x86_64 }  # Intel
+          - { os: windows-2022,  name: windows }
+
+    steps:
+      - name: Checkout (ce dépôt)
+        uses: actions/checkout@v4
+
+      - name: Checkout fritzing-app
+        uses: actions/checkout@v4
+        with:
+          repository: fritzing/fritzing-app
+          ref: ${{ env.FRITZING_REF }}
+          path: fritzing-app
+
+      - name: Checkout fritzing-parts
+        uses: actions/checkout@v4
+        with:
+          repository: fritzing/fritzing-parts
+          ref: ${{ env.PARTS_REF }}
+          path: fritzing-parts
+
+      - name: Install Qt ${{ env.QT_VERSION }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          modules: qtserialport qt5compat   # TODO: ajuster selon phoenix.pro
+
+      # --- Dépendances système (best-effort, à affiner au 1er run) ---
+      - name: Deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgit2-dev libboost-dev libquazip1-qt6-dev \
+            libngspice0-dev libgl1-mesa-dev   # TODO: compléter selon erreurs de link
+
+      - name: Deps (macOS)
+        if: runner.os == 'macOS'
+        run: brew install libgit2 boost quazip ngspice
+
+      - name: Deps (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          vcpkg install libgit2 boost-headers quazip ngspice   # TODO: triplet x64-windows
+        shell: bash
+
+      # --- Build (qmake) ---
+      - name: Build (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd fritzing-app
+          qmake phoenix.pro CONFIG+=release
+          make -j$(getconf _NPROCESSORS_ONLN)
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cd fritzing-app
+          qmake phoenix.pro CONFIG+=release
+          nmake          # ou jom -j%NUMBER_OF_PROCESSORS%
+        shell: cmd
+
+      # --- Packaging (MVP : déployer Qt + bundler les pièces + archiver) ---
+      # Proprement : tools/deploy_fritzing_mac.sh · tools/linux_release_script ·
+      # tools/build-windows.bat  (TODO Phase 1.1 : produire .dmg / AppImage / installeur).
+      - name: Package
+        run: |
+          mkdir -p dist
+          # bundler fritzing-parts à côté du binaire (requis au runtime)
+          cp -r fritzing-parts dist/ 2>/dev/null || true
+          echo "TODO packaging ${{ matrix.name }} : macdeployqt / linuxdeployqt / windeployqt"
+        shell: bash
+
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fritzing-${{ matrix.name }}
+          path: |
+            fritzing-app/**/Fritzing*
+            dist/**
+          if-no-files-found: warn
+
+  # Publication d'une Release (brouillon) quand on pousse un tag vX.Y.Z
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts }
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: artifacts/**
