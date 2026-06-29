@@ -121,8 +121,15 @@ fi
 # --- 7. Build (qmake + make) ----------------------------------------------------
 echo "== build Fritzing =="
 BOOST_ROOT_INC="$(brew --prefix)/include"
+# ccache si dispo (source figée => recompilations quasi instantanées en CI)
 ( cd "$FA"
-  "$QMAKE" phoenix.pro CONFIG+=release boost_root="$BOOST_ROOT_INC"
+  if command -v ccache >/dev/null 2>&1; then
+    echo ">> ccache activé"
+    "$QMAKE" phoenix.pro CONFIG+=release boost_root="$BOOST_ROOT_INC" \
+      "QMAKE_CXX=ccache clang++" "QMAKE_CC=ccache clang"
+  else
+    "$QMAKE" phoenix.pro CONFIG+=release boost_root="$BOOST_ROOT_INC"
+  fi
   make -j"$JOBS" release )
 
 APP="$ROOT/release64/Fritzing.app"
