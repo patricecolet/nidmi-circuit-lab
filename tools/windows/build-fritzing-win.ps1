@@ -71,15 +71,19 @@ if (-not (Test-Path "$ROOT\ngspice-$NGSPICE_VERSION\include\ngspice\sharedspice.
 }
 
 # --- 3. Clipper1 / polyclipping (dossier Clipper1-6.4.2) ------------------------
+# STATIQUE sur Windows : Clipper 6.4.2 n'a pas d'annotations dllexport (DLL = 0 symbole)
+# et son antique CMakeLists n'installe pas l'import lib. On compile statique + copie le .lib.
 if (-not (Test-Path "$ROOT\Clipper1-$CLIPPER_VERSION\lib\polyclipping.lib")) {
-  Write-Host "== Clipper1 $CLIPPER_VERSION =="
+  Write-Host "== Clipper1 $CLIPPER_VERSION (statique) =="
   Get-File "https://downloads.sourceforge.net/project/polyclipping/clipper_ver$CLIPPER_VERSION.zip" "$env:TEMP\clipper.zip"
   Expand-Archive "$env:TEMP\clipper.zip" -DestinationPath "$env:TEMP\clipperx" -Force
   cmake -S "$env:TEMP\clipperx\cpp" -B "$env:TEMP\clipperx\cpp\build" -A x64 $PolicyMin `
-    -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="$ROOT\Clipper1-$CLIPPER_VERSION"
+    -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX="$ROOT\Clipper1-$CLIPPER_VERSION"
   if ($LASTEXITCODE -ne 0) { throw "configure Clipper échoué" }
   cmake --build "$env:TEMP\clipperx\cpp\build" --config Release --target install
   if ($LASTEXITCODE -ne 0) { throw "build Clipper échoué" }
+  New-Item -ItemType Directory -Force "$ROOT\Clipper1-$CLIPPER_VERSION\lib" | Out-Null
+  Copy-Item "$env:TEMP\clipperx\cpp\build\Release\polyclipping.lib" "$ROOT\Clipper1-$CLIPPER_VERSION\lib\"
 }
 
 # --- 4. svgpp (header-only) -----------------------------------------------------
@@ -151,7 +155,7 @@ Copy-Item $EXE $DEPLOY
 # DLLs tierces (windeployqt ne les voit pas)
 Copy-Item "$ROOT\libgit2\build64\Release\git2.dll" $DEPLOY
 Copy-Item "$QUAZIP_DIR\bin\quazip1-qt6.dll" $DEPLOY
-Copy-Item "$ROOT\Clipper1-$CLIPPER_VERSION\bin\polyclipping.dll" $DEPLOY
+# (Clipper est lié statiquement sur Windows -> pas de dll)
 Copy-Item "$ROOT\ngspice-$NGSPICE_VERSION\dll-vs\*.dll" $DEPLOY   # ngspice.dll + libomp140
 Copy-Item "$ROOT\zlib\bin\zlib1.dll" $DEPLOY
 # QtCore5Compat : référencé par QuaZip, pas toujours tiré par windeployqt
