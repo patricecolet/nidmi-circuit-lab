@@ -154,6 +154,8 @@ if [ "${PACKAGE:-1}" = "1" ]; then
   # Pièces + base de données (clonées par l'appelant dans $ROOT/fritzing-parts)
   if [ -d "$ROOT/fritzing-parts" ]; then
     cp -Rf "$ROOT/fritzing-parts" "$SUP/"
+    # codesign --deep s'étrangle sur ces dossiers de métadonnées (et ils sont inutiles)
+    rm -rf "$SUP/fritzing-parts/.git" "$SUP/fritzing-parts/.github"
     "$SUP/Fritzing" -db "$SUP/fritzing-parts/parts.db" \
       -pp "$SUP/fritzing-parts" -f "$SUP/fritzing-parts" || true
   else

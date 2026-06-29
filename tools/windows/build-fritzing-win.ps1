@@ -36,7 +36,13 @@ $SevenZip = "$env:ProgramFiles\7-Zip\7z.exe"
 $PolicyMin = "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
 Write-Host ">> Qt $QtVer ($QtDir) — arch $Arch"
 
-function Get-File($url, $dest) { Write-Host ">> télécharge $url"; Invoke-WebRequest -Uri $url -OutFile $dest }
+# curl.exe (présent sur le runner) suit les redirections SourceForge ; Invoke-WebRequest
+# récupère parfois la page HTML interstitielle au lieu du fichier.
+function Get-File($url, $dest) {
+  Write-Host ">> télécharge $url"
+  & curl.exe -fL --retry 3 -o $dest $url
+  if ($LASTEXITCODE -ne 0) { throw "téléchargement échoué : $url" }
+}
 
 # --- 1. libgit2 (dynamique : git2.lib + git2.dll) -------------------------------
 # detect win32 attend ../libgit2/include/git2.h + ../libgit2/build64/Release/git2.lib
@@ -84,7 +90,7 @@ if (-not (Test-Path "$ROOT\svgpp-$SVGPP_VERSION\include\svgpp\svgpp.hpp")) {
 # --- 5. boost (headers, sœur boost_1_85_0 auto-détectée) ------------------------
 if (-not (Test-Path "$ROOT\boost_$BOOST_USCORE\boost\version.hpp")) {
   Write-Host "== boost $BOOST_USCORE (headers) =="
-  $bv = $BOOST_USCORE.Replace("_", ".") -replace "\.0$",""   # 1_85_0 -> 1.85.0
+  $bv = $BOOST_USCORE.Replace("_", ".")   # 1_85_0 -> 1.85.0
   Get-File "https://archives.boost.io/release/$bv/source/boost_$BOOST_USCORE.7z" "$env:TEMP\boost.7z"
   & $SevenZip x "$env:TEMP\boost.7z" "-o$ROOT" -y | Out-Null
 }
@@ -138,6 +144,7 @@ Get-ChildItem "$DEPLOY\translations\*.ts" -ErrorAction SilentlyContinue | Remove
 # Pièces + base de données
 if (Test-Path "$ROOT\fritzing-parts") {
   Copy-Item "$ROOT\fritzing-parts" $DEPLOY -Recurse -Force
+  Remove-Item "$DEPLOY\fritzing-parts\.git","$DEPLOY\fritzing-parts\.github" -Recurse -Force -ErrorAction SilentlyContinue
   & "$DEPLOY\Fritzing.exe" -pp "$DEPLOY\fritzing-parts" -db "$DEPLOY\fritzing-parts\parts.db"
 } else {
   Write-Host "AVERTISSEMENT : fritzing-parts absent — pièces non embarquées"
