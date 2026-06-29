@@ -157,7 +157,9 @@ Copy-Item "$ROOT\libgit2\build64\Release\git2.dll" $DEPLOY
 Copy-Item "$QUAZIP_DIR\bin\quazip1-qt6.dll" $DEPLOY
 # (Clipper est lié statiquement sur Windows -> pas de dll)
 Copy-Item "$ROOT\ngspice-$NGSPICE_VERSION\dll-vs\*.dll" $DEPLOY   # ngspice.dll + libomp140
-Copy-Item "$ROOT\zlib\bin\zlib1.dll" $DEPLOY
+# zlib : nom/emplacement de la dll variables selon le build -> on la cherche
+$zdll = Get-ChildItem "$ROOT\zlib" -Recurse -Filter "zlib*.dll" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($zdll) { Copy-Item $zdll.FullName $DEPLOY } else { Write-Host "AVERTISSEMENT : zlib dll introuvable" }
 # QtCore5Compat : référencé par QuaZip, pas toujours tiré par windeployqt
 Copy-Item "$QtDir\bin\Qt6Core5Compat.dll" $DEPLOY -ErrorAction SilentlyContinue
 

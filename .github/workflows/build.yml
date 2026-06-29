@@ -3,14 +3,20 @@ name: build
 # Phase 1 — compile Fritzing (upstream, sans modification) et publie les binaires en
 # artefacts (puis Release sur tag). Les étudiants téléchargent, zéro build, zéro paiement.
 #
-# macOS : job RÉEL et validé (recette dans tools/macos/build-fritzing-mac.sh).
-# Linux / Windows : encore des SCAFFOLDS (voir job `build-others`, marqué TODO).
+# macOS   : job RÉEL et validé (tools/macos/build-fritzing-mac.sh).
+# Windows : job RÉEL, en cours de stabilisation (tools/windows/build-fritzing-win.ps1).
+# Linux   : encore un SCAFFOLD (job `build-linux`, TODO).
 
 on:
   push:
     branches: [main]
     tags: ["v*"]
   workflow_dispatch:
+
+# Un nouveau push annule le run précédent (évite la saturation de la file de runners).
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   # Versions épinglées pour des builds reproductibles (à bumper consciemment).
