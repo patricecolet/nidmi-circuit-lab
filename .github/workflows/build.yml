@@ -1,12 +1,10 @@
 name: build
 
-# Phase 1 — compile Fritzing (upstream, sans modification) pour macOS / Windows / Linux
-# et publie les binaires en artefacts (puis Release sur tag). Les étudiants téléchargent,
-# zéro build, zéro paiement.
+# Phase 1 — compile Fritzing (upstream, sans modification) et publie les binaires en
+# artefacts (puis Release sur tag). Les étudiants téléchargent, zéro build, zéro paiement.
 #
-# ⚠️ SCAFFOLD : ce workflow est une base de départ. Le build de Fritzing est sensible aux
-#    versions ; chaque job demandera 1–2 itérations pour passer (deps manquantes, chemins).
-#    On débogue job par job au premier run CI. Les TODO marquent les points à ajuster.
+# macOS : job RÉEL et validé (recette dans tools/macos/build-fritzing-mac.sh).
+# Linux / Windows : encore des SCAFFOLDS (voir job `build-others`, marqué TODO).
 
 on:
   push:
@@ -16,22 +14,26 @@ on:
 
 env:
   # Versions épinglées pour des builds reproductibles (à bumper consciemment).
-  FRITZING_REF: CD-625        # tag fritzing-app  (TODO: figer sur un tag validé)
+  # develop @ 2025-10-07 : Qt6 + simulateur ngspice (le tag CD-625 d'origine était
+  # un build Qt5 de 2020, incohérent avec le reste de la recette).
+  FRITZING_REF: 04e5bb0241e8f1de24d0fce9be070041c6d5b68e
   PARTS_REF: develop          # branche fritzing-parts
-  QT_VERSION: 6.5.3
+  QT_VERSION: 6.5.3           # phoenix.pro plafonne à 6.5.10 (6.10 casse la compilation)
 
 jobs:
-  build:
-    name: ${{ matrix.name }}
+  # ============================================================================
+  # macOS — natif arm64 (macos-14) et x86_64 (macos-13). Produit un .dmg signé
+  # ad-hoc (non notarisé : déblocage Gatekeeper documenté dans le README).
+  # ============================================================================
+  macos:
+    name: macos-${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false        # un OS qui casse ne stoppe pas les autres
+      fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-22.04,  name: linux }
-          - { os: macos-14,      name: macos-arm64 }   # Apple Silicon
-          - { os: macos-13,      name: macos-x86_64 }  # Intel
-          - { os: windows-2022,  name: windows }
+          - { os: macos-14, arch: arm64 }    # Apple Silicon
+          - { os: macos-13, arch: x86_64 }   # Intel
 
     steps:
       - name: Checkout (ce dépôt)
@@ -55,69 +57,53 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
-          modules: qtserialport qt5compat   # TODO: ajuster selon phoenix.pro
+          # qtserialport : requis par phoenix.pro ; qt5compat (Core5Compat) : requis par QuaZip.
+          modules: qtserialport qt5compat
 
-      # --- Dépendances système (best-effort, à affiner au 1er run) ---
-      - name: Deps (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgit2-dev libboost-dev libquazip1-qt6-dev \
-            libngspice0-dev libgl1-mesa-dev   # TODO: compléter selon erreurs de link
+      - name: Dépendances Homebrew
+        run: brew install boost cmake
 
-      - name: Deps (macOS)
-        if: runner.os == 'macOS'
-        run: brew install libgit2 boost quazip ngspice
+      # Construit les deps sœurs (libgit2 1.7.1 static, ngspice-42, Clipper1 6.4.2,
+      # svgpp 1.3.1, QuaZip 1.4), patche l'archi, compile, package en .app + .dmg.
+      - name: Build + package Fritzing
+        env:
+          ARCH: ${{ matrix.arch }}
+          QT_DIR: ${{ env.QT_ROOT_DIR }}   # exporté par install-qt-action
+        run: ./tools/macos/build-fritzing-mac.sh
 
-      - name: Deps (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          vcpkg install libgit2 boost-headers quazip ngspice   # TODO: triplet x64-windows
-        shell: bash
-
-      # --- Build (qmake) ---
-      - name: Build (Unix)
-        if: runner.os != 'Windows'
-        run: |
-          cd fritzing-app
-          qmake phoenix.pro CONFIG+=release
-          make -j$(getconf _NPROCESSORS_ONLN)
-
-      - name: Build (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          cd fritzing-app
-          qmake phoenix.pro CONFIG+=release
-          nmake          # ou jom -j%NUMBER_OF_PROCESSORS%
-        shell: cmd
-
-      # --- Packaging (MVP : déployer Qt + bundler les pièces + archiver) ---
-      # Proprement : tools/deploy_fritzing_mac.sh · tools/linux_release_script ·
-      # tools/build-windows.bat  (TODO Phase 1.1 : produire .dmg / AppImage / installeur).
-      #
-      # macOS : pas de codesign ni notarisation (pas de compte Apple Developer payant).
-      # Les binaires sortent NON SIGNÉS → instructions de déblocage Gatekeeper dans le README.
-      - name: Package
-        run: |
-          mkdir -p dist
-          # bundler fritzing-parts à côté du binaire (requis au runtime)
-          cp -r fritzing-parts dist/ 2>/dev/null || true
-          echo "TODO packaging ${{ matrix.name }} : macdeployqt / linuxdeployqt / windeployqt"
-        shell: bash
-
-      - name: Upload artefact
+      - name: Upload artefact (.dmg)
         uses: actions/upload-artifact@v4
         with:
-          name: fritzing-${{ matrix.name }}
-          path: |
-            fritzing-app/**/Fritzing*
-            dist/**
-          if-no-files-found: warn
+          name: fritzing-macos-${{ matrix.arch }}
+          path: Fritzing-${{ matrix.arch }}.dmg
+          if-no-files-found: error
 
-  # Publication d'une Release (brouillon) quand on pousse un tag vX.Y.Z
+  # ============================================================================
+  # Linux / Windows — SCAFFOLD (non validé). À reprendre sur le modèle du job macOS :
+  # construire les mêmes deps sœurs (libgit2 dynamique sur Linux, etc.), Qt 6.5.3,
+  # qmake phoenix.pro, puis linuxdeployqt / windeployqt. Voir tools/macos/ pour le motif.
+  # ============================================================================
+  build-others:
+    name: ${{ matrix.name }} (scaffold)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-22.04, name: linux }
+          - { os: windows-2022, name: windows }
+    continue-on-error: true   # scaffold : ne bloque pas la Release macOS
+    steps:
+      - uses: actions/checkout@v4
+      - name: TODO
+        run: 'echo "TODO ${{ matrix.name }} - porter la recette deps soeurs + Qt 6.5.3 (cf. tools/macos/)"'
+        shell: bash
+
+  # Publication d'une Release (brouillon) quand on pousse un tag vX.Y.Z.
+  # Ne dépend que de macOS (seul job validé pour l'instant).
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: macos
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/download-artifact@v4

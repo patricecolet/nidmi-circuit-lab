@@ -2,9 +2,19 @@
 /fritzing-app/
 /fritzing-parts/
 
+# Dépendances sœurs construites par tools/macos/build-fritzing-mac.sh
+/libgit2-*/
+/ngspice-*/
+/Clipper1/
+/svgpp-*/
+/quazip-*/
+
 # Sorties de build / packaging
 /dist/
 /build/
+/release64/
+/debug64/
+/deploy-app/
 /artifacts/
 *.dmg
 *.AppImage
