@@ -54,7 +54,9 @@ if (-not (Test-Path "$ROOT\libgit2\build64\Release\git2.lib")) {
   Move-Item (Get-ChildItem "$env:TEMP\libgit2x" -Directory)[0].FullName "$ROOT\libgit2"
   cmake -S "$ROOT\libgit2" -B "$ROOT\libgit2\build64" -A x64 $PolicyMin `
     -DBUILD_SHARED_LIBS=ON -DBUILD_TESTS=OFF -DBUILD_CLI=OFF -DUSE_SSH=OFF -DREGEX_BACKEND=builtin
+  if ($LASTEXITCODE -ne 0) { throw "configure libgit2 échoué" }
   cmake --build "$ROOT\libgit2\build64" --config Release
+  if ($LASTEXITCODE -ne 0) { throw "build libgit2 échoué" }
 }
 
 # --- 2. ngspice (DLL Windows précompilée + headers) -----------------------------
@@ -75,7 +77,9 @@ if (-not (Test-Path "$ROOT\Clipper1-$CLIPPER_VERSION\lib\polyclipping.lib")) {
   Expand-Archive "$env:TEMP\clipper.zip" -DestinationPath "$env:TEMP\clipperx" -Force
   cmake -S "$env:TEMP\clipperx\cpp" -B "$env:TEMP\clipperx\cpp\build" -A x64 $PolicyMin `
     -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX="$ROOT\Clipper1-$CLIPPER_VERSION"
+  if ($LASTEXITCODE -ne 0) { throw "configure Clipper échoué" }
   cmake --build "$env:TEMP\clipperx\cpp\build" --config Release --target install
+  if ($LASTEXITCODE -ne 0) { throw "build Clipper échoué" }
 }
 
 # --- 4. svgpp (header-only) -----------------------------------------------------
@@ -95,6 +99,18 @@ if (-not (Test-Path "$ROOT\boost_$BOOST_USCORE\boost\version.hpp")) {
   & $SevenZip x "$env:TEMP\boost.7z" "-o$ROOT" -y | Out-Null
 }
 
+# --- 5b. zlib (QuaZip en dépend ; pas de zlib système sur Windows) --------------
+if (-not (Test-Path "$ROOT\zlib\lib\zlib.lib")) {
+  Write-Host "== zlib 1.3.1 =="
+  Get-File "https://github.com/madler/zlib/archive/refs/tags/v1.3.1.zip" "$env:TEMP\zlib.zip"
+  Expand-Archive "$env:TEMP\zlib.zip" -DestinationPath "$env:TEMP\zlibx" -Force
+  $zsrc = (Get-ChildItem "$env:TEMP\zlibx" -Directory)[0].FullName
+  cmake -S $zsrc -B "$zsrc\build" -A x64 $PolicyMin -DCMAKE_INSTALL_PREFIX="$ROOT\zlib"
+  if ($LASTEXITCODE -ne 0) { throw "cmake configure zlib échoué" }
+  cmake --build "$zsrc\build" --config Release --target install
+  if ($LASTEXITCODE -ne 0) { throw "build zlib échoué" }
+}
+
 # --- 6. QuaZip (Qt6, chemin spécifique à la version Qt) -------------------------
 $QUAZIP_DIR = "$ROOT\quazip-$QtVer-${QUAZIP_VERSION}intuisphere"
 if (-not (Test-Path "$QUAZIP_DIR\lib\quazip1-qt6.lib")) {
@@ -103,8 +119,11 @@ if (-not (Test-Path "$QUAZIP_DIR\lib\quazip1-qt6.lib")) {
   Expand-Archive "$env:TEMP\quazip.zip" -DestinationPath "$env:TEMP\quazipx" -Force
   $qsrc = (Get-ChildItem "$env:TEMP\quazipx" -Directory)[0].FullName
   cmake -S $qsrc -B "$qsrc\build" -A x64 $PolicyMin -DQUAZIP_QT_MAJOR_VERSION=6 `
-    -DBUILD_SHARED_LIBS=ON -DCMAKE_PREFIX_PATH="$QtDir" -DCMAKE_INSTALL_PREFIX="$QUAZIP_DIR"
+    -DBUILD_SHARED_LIBS=ON -DCMAKE_PREFIX_PATH="$QtDir" -DZLIB_ROOT="$ROOT\zlib" `
+    -DCMAKE_INSTALL_PREFIX="$QUAZIP_DIR"
+  if ($LASTEXITCODE -ne 0) { throw "cmake configure QuaZip échoué" }
   cmake --build "$qsrc\build" --config Release --target install
+  if ($LASTEXITCODE -ne 0) { throw "build QuaZip échoué" }
 }
 
 # --- 7. Build (qmake + nmake) ---------------------------------------------------
@@ -112,6 +131,7 @@ Write-Host "== build Fritzing =="
 $env:RELEASE_SCRIPT = "release_script"
 Push-Location $FA
 & $QMAKE -o Makefile phoenix.pro
+if ($LASTEXITCODE -ne 0) { throw "qmake a échoué ($LASTEXITCODE)" }
 nmake release
 if ($LASTEXITCODE -ne 0) { throw "nmake a échoué ($LASTEXITCODE)" }
 Pop-Location
@@ -133,6 +153,7 @@ Copy-Item "$ROOT\libgit2\build64\Release\git2.dll" $DEPLOY
 Copy-Item "$QUAZIP_DIR\bin\quazip1-qt6.dll" $DEPLOY
 Copy-Item "$ROOT\Clipper1-$CLIPPER_VERSION\bin\polyclipping.dll" $DEPLOY
 Copy-Item "$ROOT\ngspice-$NGSPICE_VERSION\dll-vs\*.dll" $DEPLOY   # ngspice.dll + libomp140
+Copy-Item "$ROOT\zlib\bin\zlib1.dll" $DEPLOY
 # QtCore5Compat : référencé par QuaZip, pas toujours tiré par windeployqt
 Copy-Item "$QtDir\bin\Qt6Core5Compat.dll" $DEPLOY -ErrorAction SilentlyContinue
 
