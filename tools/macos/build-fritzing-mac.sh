@@ -45,7 +45,9 @@ echo ">> Qt $QT_VERSION ($QT_DIR) — arch $ARCH — deploy target $DEPLOY_TARGE
 
 CMAKE_COMMON=(-DCMAKE_BUILD_TYPE=Release
   -DCMAKE_OSX_ARCHITECTURES="$ARCH"
-  -DCMAKE_OSX_DEPLOYMENT_TARGET="$DEPLOY_TARGET")
+  -DCMAKE_OSX_DEPLOYMENT_TARGET="$DEPLOY_TARGET"
+  # Clipper 6.4.2 exige cmake_minimum_required 2.8, refusé par CMake >= 4 : on relâche.
+  -DCMAKE_POLICY_VERSION_MINIMUM=3.5)
 
 fetch() { # url dest
   echo ">> télécharge $1"; curl -fL --retry 3 -o "$2" "$1"
