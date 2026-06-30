@@ -34,6 +34,7 @@ jobs:
   macos:
     name: macos-${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45   # garde-fou : un hang échoue vite (pas 6 h de minutes macOS)
     strategy:
       fail-fast: false
       matrix:
@@ -109,6 +110,7 @@ jobs:
   windows:
     name: windows-x64
     runs-on: windows-2022
+    timeout-minutes: 60
     steps:
       - name: Checkout (ce dépôt)
         uses: actions/checkout@v4

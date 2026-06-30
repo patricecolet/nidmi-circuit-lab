@@ -53,6 +53,18 @@ fetch() { # url dest
   echo ">> télécharge $1"; curl -fL --retry 3 -o "$2" "$1"
 }
 
+# timeout portable (le runner macOS n'a pas timeout/gtimeout)
+run_with_timeout() { # secs cmd...
+  local secs="$1"; shift
+  "$@" & local p=$!
+  local n=0
+  while kill -0 "$p" 2>/dev/null; do
+    sleep 5; n=$((n+5))
+    if [ "$n" -ge "$secs" ]; then echo ">> timeout ${secs}s -> kill $p"; kill -9 "$p" 2>/dev/null || true; return 124; fi
+  done
+  wait "$p"
+}
+
 # --- 1. libgit2 (statique) ------------------------------------------------------
 if [ ! -f "$ROOT/libgit2-$LIBGIT2_VERSION/lib/libgit2.a" ]; then
   echo "== libgit2 $LIBGIT2_VERSION (static) =="
@@ -141,6 +153,10 @@ if [ "${PACKAGE:-1}" = "1" ]; then
   echo "== packaging (macdeployqt + ressources + signature) =="
   "$QT_DIR/bin/macdeployqt" "$APP" -verbose=1 || true
 
+  # plugin QPA offscreen : permet de générer parts.db sans écran (runner CI headless)
+  mkdir -p "$APP/Contents/PlugIns/platforms"
+  cp "$QT_DIR/plugins/platforms/libqoffscreen.dylib" "$APP/Contents/PlugIns/platforms/" 2>/dev/null || true
+
   FW="$APP/Contents/Frameworks"
   # QtCore5Compat : macdeployqt ne sait pas le résoudre via le rpath de QuaZip.
   if [ ! -d "$FW/QtCore5Compat.framework" ]; then
@@ -163,8 +179,9 @@ if [ "${PACKAGE:-1}" = "1" ]; then
     cp -Rf "$ROOT/fritzing-parts" "$SUP/"
     # codesign --deep s'étrangle sur ces dossiers de métadonnées (et ils sont inutiles)
     rm -rf "$SUP/fritzing-parts/.git" "$SUP/fritzing-parts/.github"
-    "$SUP/Fritzing" -db "$SUP/fritzing-parts/parts.db" \
-      -pp "$SUP/fritzing-parts" -f "$SUP/fritzing-parts" || true
+    # offscreen + timeout : sans écran Fritzing -db pouvait hang indéfiniment (kill à 6 h en CI)
+    QT_QPA_PLATFORM=offscreen run_with_timeout 600 "$SUP/Fritzing" -db "$SUP/fritzing-parts/parts.db" \
+      -pp "$SUP/fritzing-parts" -f "$SUP/fritzing-parts" || echo ">> parts.db : échec/timeout (pièces non indexées)"
   else
     echo "AVERTISSEMENT : $ROOT/fritzing-parts absent — pièces non embarquées"
   fi
