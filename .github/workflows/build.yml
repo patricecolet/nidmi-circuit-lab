@@ -204,6 +204,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [macos-arm64, windows]
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write   # requis pour créer la Release (sinon 403)
     steps:
       - uses: actions/download-artifact@v4
         with: { path: artifacts }
