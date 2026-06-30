@@ -216,7 +216,7 @@ jobs:
           version: ${{ env.QT_VERSION }}
           host: linux
           target: desktop
-          arch: linux_gcc_64
+          arch: gcc_64   # aqt : Linux desktop = gcc_64 (PAS linux_gcc_64)
           modules: qtserialport qt5compat
       - name: Cache deps sœurs
         uses: actions/cache@v4
