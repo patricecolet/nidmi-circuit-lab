@@ -28,49 +28,29 @@ env:
 
 jobs:
   # ============================================================================
-  # macOS — natif arm64 (macos-14) et x86_64 (macos-13). Produit un .dmg signé
-  # ad-hoc (non notarisé : déblocage Gatekeeper documenté dans le README).
+  # macOS arm64 (Apple Silicon) — job BLOQUANT (la release l'attend).
+  # Produit un .dmg signé ad-hoc (non notarisé : Gatekeeper documenté au README).
   # ============================================================================
-  macos:
-    name: macos-${{ matrix.arch }}
-    runs-on: ${{ matrix.os }}
+  macos-arm64:
+    name: macos-arm64
+    runs-on: macos-14
     timeout-minutes: 45   # garde-fou : un hang échoue vite (pas 6 h de minutes macOS)
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { os: macos-14, arch: arm64 }    # Apple Silicon
-          - { os: macos-13, arch: x86_64 }   # Intel
-
     steps:
       - name: Checkout (ce dépôt)
         uses: actions/checkout@v4
-
       - name: Checkout fritzing-app
         uses: actions/checkout@v4
-        with:
-          repository: fritzing/fritzing-app
-          ref: ${{ env.FRITZING_REF }}
-          path: fritzing-app
-
+        with: { repository: fritzing/fritzing-app, ref: "${{ env.FRITZING_REF }}", path: fritzing-app }
       - name: Checkout fritzing-parts
         uses: actions/checkout@v4
-        with:
-          repository: fritzing/fritzing-parts
-          ref: ${{ env.PARTS_REF }}
-          path: fritzing-parts
-
+        with: { repository: fritzing/fritzing-parts, ref: "${{ env.PARTS_REF }}", path: fritzing-parts }
       - name: Install Qt ${{ env.QT_VERSION }}
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
-          # qtserialport : requis par phoenix.pro ; qt5compat (Core5Compat) : requis par QuaZip.
-          modules: qtserialport qt5compat
-
+          modules: qtserialport qt5compat   # serialport (phoenix.pro) ; qt5compat (QuaZip)
       - name: Dépendances Homebrew
         run: brew install boost cmake
-
-      # Cache des deps sœurs (versions figées) : le script saute leur rebuild si présentes.
       - name: Cache deps sœurs
         uses: actions/cache@v4
         with:
@@ -80,28 +60,62 @@ jobs:
             Clipper1
             svgpp-1.3.1
             quazip-6.5.3-1.4intuisphere
-          key: macos-deps-${{ matrix.arch }}-${{ hashFiles('tools/macos/build-fritzing-mac.sh') }}
-
-      # ccache : source Fritzing figée (FRITZING_REF) => recompilations quasi instantanées.
+          key: macos-deps-arm64-${{ hashFiles('tools/macos/build-fritzing-mac.sh') }}
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: macos-${{ matrix.arch }}
-          max-size: 1G
-
-      # Construit les deps sœurs manquantes, patche l'archi, compile, package en .app + .dmg.
+        with: { key: macos-arm64, max-size: 1G }
       - name: Build + package Fritzing
-        env:
-          ARCH: ${{ matrix.arch }}
-          QT_DIR: ${{ env.QT_ROOT_DIR }}   # exporté par install-qt-action
+        env: { ARCH: arm64, QT_DIR: "${{ env.QT_ROOT_DIR }}" }
         run: ./tools/macos/build-fritzing-mac.sh
-
       - name: Upload artefact (.dmg)
         uses: actions/upload-artifact@v4
+        with: { name: fritzing-macos-arm64, path: Fritzing-arm64.dmg, if-no-files-found: error }
+
+  # ============================================================================
+  # macOS x86_64 (Intel) — best-effort, NON bloquant (runners macos-13 rares).
+  # continue-on-error + hors du `needs` de la release : ne bloque jamais.
+  # Son .dmg est inclus à la release s'il est prêt à temps.
+  # ============================================================================
+  macos-intel:
+    name: macos-intel
+    runs-on: macos-13
+    timeout-minutes: 45
+    continue-on-error: true
+    steps:
+      - name: Checkout (ce dépôt)
+        uses: actions/checkout@v4
+      - name: Checkout fritzing-app
+        uses: actions/checkout@v4
+        with: { repository: fritzing/fritzing-app, ref: "${{ env.FRITZING_REF }}", path: fritzing-app }
+      - name: Checkout fritzing-parts
+        uses: actions/checkout@v4
+        with: { repository: fritzing/fritzing-parts, ref: "${{ env.PARTS_REF }}", path: fritzing-parts }
+      - name: Install Qt ${{ env.QT_VERSION }}
+        uses: jurplel/install-qt-action@v4
         with:
-          name: fritzing-macos-${{ matrix.arch }}
-          path: Fritzing-${{ matrix.arch }}.dmg
-          if-no-files-found: error
+          version: ${{ env.QT_VERSION }}
+          modules: qtserialport qt5compat
+      - name: Dépendances Homebrew
+        run: brew install boost cmake
+      - name: Cache deps sœurs
+        uses: actions/cache@v4
+        with:
+          path: |
+            libgit2-1.7.1
+            ngspice-42
+            Clipper1
+            svgpp-1.3.1
+            quazip-6.5.3-1.4intuisphere
+          key: macos-deps-x86_64-${{ hashFiles('tools/macos/build-fritzing-mac.sh') }}
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with: { key: macos-x86_64, max-size: 1G }
+      - name: Build + package Fritzing
+        env: { ARCH: x86_64, QT_DIR: "${{ env.QT_ROOT_DIR }}" }
+        run: ./tools/macos/build-fritzing-mac.sh
+      - name: Upload artefact (.dmg)
+        uses: actions/upload-artifact@v4
+        with: { name: fritzing-macos-x86_64, path: Fritzing-x86_64.dmg, if-no-files-found: error }
 
   # ============================================================================
   # Windows — MSVC x64, Qt 6.5.3. Produit un .zip (binaires non signés -> SmartScreen,
@@ -185,9 +199,10 @@ jobs:
         run: 'echo "TODO linux - porter la recette deps soeurs + Qt 6.5.3 (cf. tools/macos|windows)"'
 
   # Publication d'une Release (brouillon) quand on pousse un tag vX.Y.Z.
+  # Ne dépend que d'arm64 + Windows ; le .dmg Intel est inclus s'il est prêt à temps.
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [macos, windows]
+    needs: [macos-arm64, windows]
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/download-artifact@v4
@@ -195,4 +210,19 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
+          name: Fritzing (édition cours) ${{ github.ref_name }}
           files: artifacts/**
+          body: |
+            **Build éducatif non-officiel de [Fritzing](https://fritzing.org)** — gratuit, multiplateforme.
+            Ce n'est pas le projet Fritzing ; pour le binaire officiel et le soutenir : fritzing.org.
+
+            ### Téléchargements
+            - **macOS Apple Silicon** : `Fritzing-arm64.dmg`
+            - **macOS Intel** : `Fritzing-x86_64.dmg` *(inclus si le build Intel a abouti)*
+            - **Windows 64-bit** : `Fritzing-win-x64.zip`
+
+            ### Premier lancement (binaires non signés)
+            - **macOS** : `xattr -dr com.apple.quarantine /Applications/Fritzing.app` (ou Réglages ▸ Confidentialité ▸ « Ouvrir quand même »).
+            - **Windows** : SmartScreen ▸ « Informations complémentaires » ▸ « Exécuter quand même ».
+
+            Fritzing est sous GPLv3 ; les pièces (fritzing-parts) sous CC-BY-SA.
