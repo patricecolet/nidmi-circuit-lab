@@ -122,33 +122,20 @@ echo "== build Fritzing =="
   make -j"$JOBS" )
 [ -x "$FA/Fritzing" ] || { echo "ERREUR : binaire non produit"; exit 1; }
 
-# --- 8. AppDir + parts.db + AppImage --------------------------------------------
-echo "== packaging (AppDir + linuxdeployqt) =="
+# --- 8. AppDir minimal -> linuxdeployqt -> données -> parts.db -> AppImage -------
+echo "== packaging =="
 APPDIR="$ROOT/AppDir"
 rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib" \
          "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/256x256/apps"
 cp "$FA/Fritzing" "$APPDIR/usr/bin/"
-# données : placées dans usr/ (FolderUtils y cherche translations+help, puis fritzing-parts)
-cp -r "$FA/sketches" "$FA/help" "$FA/translations" "$APPDIR/usr/"
-cp -r "$ROOT/fritzing-parts" "$APPDIR/usr/fritzing-parts"
-rm -rf "$APPDIR/usr/fritzing-parts/.git" "$APPDIR/usr/fritzing-parts/.github"
-rm -f "$APPDIR/usr/translations/"*.ts 2>/dev/null || true
-find "$APPDIR/usr/translations" -name "*.qm" -size -128c -delete 2>/dev/null || true
-# desktop + icône (Icon=fritzing)
 cp "$FA/org.fritzing.Fritzing.desktop" "$APPDIR/usr/share/applications/"
 cp "$FA/resources/system_icons/linux/fz_icon256.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/fritzing.png"
-# libngspice (dlopen) bundlée
+# libngspice (dlopen au runtime) bundlée
 cp -P "$ROOT/ngspice-$NGSPICE_VERSION/lib/"libngspice.so* "$APPDIR/usr/lib/" 2>/dev/null || true
 
-# parts.db en headless (offscreen) avec les libs des deps + Qt accessibles
-export LD_LIBRARY_PATH="$QT_DIR/lib:$ROOT/libgit2-$LIBGIT2_VERSION/lib:$ROOT/Clipper1/$CLIPPER_VERSION/lib:$QUAZIP_DIR/lib:$ROOT/ngspice-$NGSPICE_VERSION/lib:${LD_LIBRARY_PATH:-}"
-QT_QPA_PLATFORM=offscreen QT_PLUGIN_PATH="$QT_DIR/plugins" run_with_timeout 600 \
-  "$APPDIR/usr/bin/Fritzing" -db "$APPDIR/usr/fritzing-parts/parts.db" \
-  -pp "$APPDIR/usr/fritzing-parts" -f "$APPDIR/usr/fritzing-parts" \
-  || echo ">> parts.db : échec/timeout (pièces non indexées)"
-
-# linuxdeployqt : bundle Qt + libgit2/quazip/clipper (via rpath) + AppImage
+# linuxdeployqt : bundle Qt + libgit2/quazip/clipper (via rpath) — SUR APPDIR MINIMAL
+# (avant d'ajouter fritzing-parts : sinon il scanne 12k fichiers et prend un .svg pour icône)
 if [ ! -x "$ROOT/linuxdeployqt.AppImage" ]; then
   fetch "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" "$ROOT/linuxdeployqt.AppImage"
   chmod +x "$ROOT/linuxdeployqt.AppImage"
@@ -156,9 +143,26 @@ fi
 export PATH="$QT_DIR/bin:$PATH"
 "$ROOT/linuxdeployqt.AppImage" "$APPDIR/usr/share/applications/org.fritzing.Fritzing.desktop" \
   -qmake="$QMAKE" -unsupported-allow-new-glibc \
-  -extra-plugins=platforms/libqoffscreen.so,sqldrivers \
-  -appimage
-mv -f Fritzing*-x86_64.AppImage "$ROOT/Fritzing-x86_64.AppImage" 2>/dev/null \
-  || mv -f ./*.AppImage "$ROOT/Fritzing-x86_64.AppImage"
+  -extra-plugins=platforms/libqoffscreen.so,sqldrivers
+
+# données APRÈS le bundling : usr/ (FolderUtils y cherche translations+help, puis fritzing-parts)
+cp -r "$FA/sketches" "$FA/help" "$FA/translations" "$APPDIR/usr/"
+cp -r "$ROOT/fritzing-parts" "$APPDIR/usr/fritzing-parts"
+rm -rf "$APPDIR/usr/fritzing-parts/.git" "$APPDIR/usr/fritzing-parts/.github"
+rm -f "$APPDIR/usr/translations/"*.ts 2>/dev/null || true
+find "$APPDIR/usr/translations" -name "*.qm" -size -128c -delete 2>/dev/null || true
+
+# parts.db en headless (offscreen) — le binaire est désormais autonome (Qt bundlé par linuxdeployqt)
+QT_QPA_PLATFORM=offscreen run_with_timeout 600 \
+  "$APPDIR/usr/bin/Fritzing" -db "$APPDIR/usr/fritzing-parts/parts.db" \
+  -pp "$APPDIR/usr/fritzing-parts" -f "$APPDIR/usr/fritzing-parts" \
+  || echo ">> parts.db : échec/timeout (pièces non indexées)"
+
+# AppImage via appimagetool (ne scanne pas, ne juge pas les icônes : il empaquette l'AppDir)
+if [ ! -x "$ROOT/appimagetool.AppImage" ]; then
+  fetch "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" "$ROOT/appimagetool.AppImage"
+  chmod +x "$ROOT/appimagetool.AppImage"
+fi
+ARCH=x86_64 "$ROOT/appimagetool.AppImage" --appimage-extract-and-run "$APPDIR" "$ROOT/Fritzing-x86_64.AppImage"
 echo ">> AppImage : $ROOT/Fritzing-x86_64.AppImage"
 echo ">> terminé."
