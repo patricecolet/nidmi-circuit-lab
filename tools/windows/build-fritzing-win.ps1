@@ -171,10 +171,19 @@ Get-ChildItem "$DEPLOY\translations\*.ts" -ErrorAction SilentlyContinue | Remove
 # Pièces + base de données
 if (Test-Path "$ROOT\fritzing-parts") {
   Copy-Item "$ROOT\fritzing-parts" $DEPLOY -Recurse -Force
-  Remove-Item "$DEPLOY\fritzing-parts\.git","$DEPLOY\fritzing-parts\.github" -Recurse -Force -ErrorAction SilentlyContinue
+  # IMPORTANT : générer parts.db AVANT de retirer .git. La génération (`-db`, fullLoad)
+  # appelle PartsChecker::getSha() -> git_repository_open() sur fritzing-parts ; sans .git
+  # le SHA est vide, loadReferenceModel() renvoie false et parts.db n'est jamais écrit
+  # (app publiée sans pièces -> « Unable to find parts git repository »).
   & "$DEPLOY\Fritzing.exe" -pp "$DEPLOY\fritzing-parts" -db "$DEPLOY\fritzing-parts\parts.db"
+  # Garde-fou : ne jamais packager un .zip sans base de pièces.
+  $db = "$DEPLOY\fritzing-parts\parts.db"
+  if (-not (Test-Path $db) -or (Get-Item $db).Length -eq 0) { throw "parts.db non généré (pièces manquantes)" }
+  Write-Host (">> parts.db : {0:N1} Mo" -f ((Get-Item $db).Length / 1MB))
+  # .git/.github retirés APRÈS génération (inutiles au runtime)
+  Remove-Item "$DEPLOY\fritzing-parts\.git","$DEPLOY\fritzing-parts\.github" -Recurse -Force -ErrorAction SilentlyContinue
 } else {
-  Write-Host "AVERTISSEMENT : fritzing-parts absent — pièces non embarquées"
+  throw "fritzing-parts absent — pièces non embarquées"
 }
 
 # Zip final (binaires NON signés -> SmartScreen au 1er lancement, cf. README)

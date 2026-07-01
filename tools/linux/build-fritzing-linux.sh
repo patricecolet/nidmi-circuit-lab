@@ -135,7 +135,6 @@ cp -P "$ROOT/ngspice-$NGSPICE_VERSION/lib/"libngspice.so* "$APPDIR/usr/lib/" 2>/
 # données : usr/ (FolderUtils y cherche translations+help, puis fritzing-parts)
 cp -r "$FA/sketches" "$FA/help" "$FA/translations" "$APPDIR/usr/"
 cp -r "$ROOT/fritzing-parts" "$APPDIR/usr/fritzing-parts"
-rm -rf "$APPDIR/usr/fritzing-parts/.git" "$APPDIR/usr/fritzing-parts/.github"
 rm -f "$APPDIR/usr/translations/"*.ts 2>/dev/null || true
 find "$APPDIR/usr/translations" -name "*.qm" -size -128c -delete 2>/dev/null || true
 
@@ -143,11 +142,19 @@ find "$APPDIR/usr/translations" -name "*.qm" -size -128c -delete 2>/dev/null || 
 export LD_LIBRARY_PATH="$QT_DIR/lib:$ROOT/libgit2-$LIBGIT2_VERSION/lib:$ROOT/Clipper1/$CLIPPER_VERSION/lib:$QUAZIP_DIR/lib:$ROOT/ngspice-$NGSPICE_VERSION/lib:${LD_LIBRARY_PATH:-}"
 export PATH="$QT_DIR/bin:$PATH"   # qmake pour le plugin qt
 
-# parts.db en headless (offscreen), via le Qt d'install
+# parts.db en headless (offscreen), via le Qt d'install.
+# IMPORTANT : .git de fritzing-parts encore présent ici — la génération (`-db`, fullLoad)
+# appelle PartsChecker::getSha() -> git_repository_open() ; sans .git le SHA est vide,
+# loadReferenceModel() renvoie false et parts.db n'est jamais écrit (AppImage sans pièces).
 QT_QPA_PLATFORM=offscreen QT_PLUGIN_PATH="$QT_DIR/plugins" run_with_timeout 600 \
   "$APPDIR/usr/bin/Fritzing" -db "$APPDIR/usr/fritzing-parts/parts.db" \
   -pp "$APPDIR/usr/fritzing-parts" -f "$APPDIR/usr/fritzing-parts" \
-  || echo ">> parts.db : échec/timeout (pièces non indexées)"
+  || echo ">> parts.db : échec/timeout"
+# Garde-fou : ne jamais packager un AppImage sans base de pièces.
+[ -s "$APPDIR/usr/fritzing-parts/parts.db" ] || { echo "ERREUR : parts.db non généré"; exit 1; }
+echo ">> parts.db : $(du -h "$APPDIR/usr/fritzing-parts/parts.db" | cut -f1)"
+# .git/.github retirés APRÈS génération (inutiles au runtime, alourdissent l'AppImage)
+rm -rf "$APPDIR/usr/fritzing-parts/.git" "$APPDIR/usr/fritzing-parts/.github"
 
 # linuxdeploy + plugin qt : bundle Qt + libgit2/quazip/clipper/ngspice -> AppImage.
 # (icône passée explicitement -> pas de scan hasardeux de fritzing-parts)

@@ -177,13 +177,20 @@ if [ "${PACKAGE:-1}" = "1" ]; then
   # Pièces + base de données (clonées par l'appelant dans $ROOT/fritzing-parts)
   if [ -d "$ROOT/fritzing-parts" ]; then
     cp -Rf "$ROOT/fritzing-parts" "$SUP/"
-    # codesign --deep s'étrangle sur ces dossiers de métadonnées (et ils sont inutiles)
-    rm -rf "$SUP/fritzing-parts/.git" "$SUP/fritzing-parts/.github"
+    # IMPORTANT : générer parts.db AVANT de supprimer .git. La génération (`-db`,
+    # fullLoad) appelle PartsChecker::getSha() -> git_repository_open() sur le dossier :
+    # sans .git, le SHA est vide, loadReferenceModel() renvoie false et parts.db n'est
+    # JAMAIS écrit (app publiée sans pièces -> « Unable to find parts git repository »).
     # offscreen + timeout : sans écran Fritzing -db pouvait hang indéfiniment (kill à 6 h en CI)
     QT_QPA_PLATFORM=offscreen run_with_timeout 600 "$SUP/Fritzing" -db "$SUP/fritzing-parts/parts.db" \
-      -pp "$SUP/fritzing-parts" -f "$SUP/fritzing-parts" || echo ">> parts.db : échec/timeout (pièces non indexées)"
+      -pp "$SUP/fritzing-parts" -f "$SUP/fritzing-parts" || echo ">> parts.db : échec/timeout"
+    # Garde-fou : ne jamais packager/publier un bundle sans base de pièces.
+    [ -s "$SUP/fritzing-parts/parts.db" ] || { echo "ERREUR : parts.db non généré (pièces manquantes)"; exit 1; }
+    echo ">> parts.db : $(du -h "$SUP/fritzing-parts/parts.db" | cut -f1)"
+    # .git/.github retirés APRÈS (codesign --deep s'étrangle dessus, et ils sont inutiles au runtime)
+    rm -rf "$SUP/fritzing-parts/.git" "$SUP/fritzing-parts/.github"
   else
-    echo "AVERTISSEMENT : $ROOT/fritzing-parts absent — pièces non embarquées"
+    echo "ERREUR : $ROOT/fritzing-parts absent — pièces non embarquées"; exit 1
   fi
 
   # Signature ad-hoc (obligatoire : un binaire arm64 non signé ne se lance pas).
