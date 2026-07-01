@@ -175,7 +175,13 @@ if (Test-Path "$ROOT\fritzing-parts") {
   # appelle PartsChecker::getSha() -> git_repository_open() sur fritzing-parts ; sans .git
   # le SHA est vide, loadReferenceModel() renvoie false et parts.db n'est jamais écrit
   # (app publiée sans pièces -> « Unable to find parts git repository »).
-  & "$DEPLOY\Fritzing.exe" -pp "$DEPLOY\fritzing-parts" -db "$DEPLOY\fritzing-parts\parts.db"
+  # NB : Fritzing.exe est une app GUI (subsystem WINDOWS) -> l'opérateur `&` NE L'ATTEND PAS.
+  # On utilise Start-Process -Wait (via WaitForExit + timeout) sinon le garde-fou ci-dessous
+  # teste parts.db avant que la génération soit finie.
+  $p = Start-Process -FilePath "$DEPLOY\Fritzing.exe" `
+        -ArgumentList '-pp',"$DEPLOY\fritzing-parts",'-db',"$DEPLOY\fritzing-parts\parts.db" `
+        -PassThru -NoNewWindow
+  if (-not $p.WaitForExit(600000)) { $p.Kill(); throw "parts.db : timeout 600s" }
   # Garde-fou : ne jamais packager un .zip sans base de pièces.
   $db = "$DEPLOY\fritzing-parts\parts.db"
   if (-not (Test-Path $db) -or (Get-Item $db).Length -eq 0) { throw "parts.db non généré (pièces manquantes)" }
