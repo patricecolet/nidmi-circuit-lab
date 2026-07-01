@@ -167,6 +167,13 @@ if [ "${PACKAGE:-1}" = "1" ]; then
   mkdir -p "$APP/Contents/PlugIns"
   cp "$ROOT/ngspice-$NGSPICE_VERSION/lib/libngspice.0.dylib" "$APP/Contents/PlugIns/"
 
+  # Traductions : compiler les .ts -> .qm (sinon translations/ vide -> UI toujours en anglais).
+  # lrelease est fourni par Qt. On compile toutes les langues ; au runtime Fritzing charge
+  # fritzing_<locale>.qm selon QLocale::system() (donc français auto sur un macOS en français).
+  echo "== traductions (lrelease) =="
+  "$QT_DIR/bin/lrelease" "$FA"/translations/*.ts >/dev/null 2>&1 || echo ">> lrelease : avertissements (langues incomplètes)"
+  [ -s "$FA/translations/fritzing_fr.qm" ] || { echo "ERREUR : fritzing_fr.qm non généré"; exit 1; }
+
   # Ressources runtime (le dossier data est résolu dans Contents/MacOS sur macOS)
   SUP="$APP/Contents/MacOS"
   cp -Rf "$FA/sketches" "$FA/help" "$FA/translations" \

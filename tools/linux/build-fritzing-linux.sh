@@ -132,6 +132,12 @@ cp "$FA/Fritzing" "$APPDIR/usr/bin/"
 cp "$FA/org.fritzing.Fritzing.desktop" "$APPDIR/usr/share/applications/"
 cp "$FA/resources/system_icons/linux/fz_icon256.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/fritzing.png"
 cp -P "$ROOT/ngspice-$NGSPICE_VERSION/lib/"libngspice.so* "$APPDIR/usr/lib/" 2>/dev/null || true
+# Traductions : compiler les .ts -> .qm (sinon translations/ vide -> UI toujours en anglais).
+# Au runtime Fritzing charge fritzing_<locale>.qm selon QLocale::system() (français auto sur OS fr).
+echo "== traductions (lrelease) =="
+"$QT_DIR/bin/lrelease" "$FA"/translations/*.ts >/dev/null 2>&1 || echo ">> lrelease : avertissements (langues incomplètes)"
+[ -s "$FA/translations/fritzing_fr.qm" ] || { echo "ERREUR : fritzing_fr.qm non généré"; exit 1; }
+
 # données : usr/ (FolderUtils y cherche translations+help, puis fritzing-parts)
 cp -r "$FA/sketches" "$FA/help" "$FA/translations" "$APPDIR/usr/"
 cp -r "$ROOT/fritzing-parts" "$APPDIR/usr/fritzing-parts"

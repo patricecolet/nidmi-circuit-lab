@@ -163,6 +163,14 @@ if ($zdll) { Copy-Item $zdll.FullName $DEPLOY } else { Write-Host "AVERTISSEMENT
 # QtCore5Compat : référencé par QuaZip, pas toujours tiré par windeployqt
 Copy-Item "$QtDir\bin\Qt6Core5Compat.dll" $DEPLOY -ErrorAction SilentlyContinue
 
+# Traductions : compiler les .ts -> .qm (sinon translations/ vide -> UI toujours en anglais).
+# Au runtime Fritzing charge fritzing_<locale>.qm selon QLocale::system() (français auto sur OS fr).
+# lrelease est une app console -> `&` attend bien sa fin (contrairement à Fritzing.exe).
+Write-Host "== traductions (lrelease) =="
+& "$QtDir\bin\lrelease.exe" @(Get-ChildItem "$FA\translations\*.ts" | ForEach-Object FullName) | Out-Null
+$frqm = "$FA\translations\fritzing_fr.qm"
+if (-not (Test-Path $frqm) -or (Get-Item $frqm).Length -eq 0) { throw "fritzing_fr.qm non généré" }
+
 # Ressources runtime
 foreach ($d in @("sketches","help","translations")) { Copy-Item "$FA\$d" $DEPLOY -Recurse -Force }
 Copy-Item "$FA\INSTALL.txt","$FA\README.md","$FA\LICENSE.GPL2","$FA\LICENSE.GPL3","$FA\LICENSE.CC-BY-SA" $DEPLOY -Force
