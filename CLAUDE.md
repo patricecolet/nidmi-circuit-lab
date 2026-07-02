@@ -9,20 +9,30 @@ workflow that compiles **upstream Fritzing from source** and publishes free, cro
 binaries (macOS Apple Silicon/Intel, Windows, Linux) for educational use, so students can use
 Fritzing without paying for the official prebuilt binary.
 
-The entire substance of the project is **one file**: [`.github/workflows/build.yml`](.github/workflows/build.yml).
-`docs/BUILD.md` mirrors that workflow as manual local steps for debugging. Everything else is README/license.
+The substance of the project is **`.github/workflows/build.yml`** plus the three per-OS build
+scripts it drives (`tools/{macos,windows,linux}/`). `docs/BUILD.md` mirrors the macOS flow as
+manual local steps for debugging. Everything else is README/license.
 
-The Fritzing sources (`fritzing/fritzing-app`, `fritzing/fritzing-parts`) are **never committed**
-here — the CI clones them at build time (see `.gitignore`). Do not add them to the repo.
+The Fritzing sources (`fritzing/fritzing-app`, `fritzing/fritzing-parts`) and all sibling
+dependencies are **never committed** here — the CI clones/builds them at build time (see
+`.gitignore`; they may exist as untracked dirs in a local checkout). Do not add them to the repo.
 
 ## How the build works
 
-`build.yml` has a **real, validated `macos` job** (matrix: `macos-14` arm64, `macos-13` x86_64)
-and a **`build-others` scaffold** (linux + windows, still TODO). The macOS job clones `fritzing-app`
-(pinned `FRITZING_REF`) and `fritzing-parts` (`PARTS_REF`) as sibling dirs, installs Qt 6.5.3, then
-runs [`tools/macos/build-fritzing-mac.sh`](tools/macos/build-fritzing-mac.sh) which does everything:
-builds the sibling deps, patches `phoenix.pro`, `qmake`/`make`, packages a signed `.app` + `.dmg`.
-A `release` job (depends on `macos` only) publishes a **draft** GitHub Release on a `vX.Y.Z` tag.
+`build.yml` runs five jobs, each cloning `fritzing-app` (pinned `FRITZING_REF`) and `fritzing-parts`
+(`PARTS_REF`) as sibling dirs, installing Qt 6.5.3, then running a per-OS script that builds the
+sibling deps, patches `phoenix.pro`, `qmake`/`make`(/`nmake`), and packages the result:
+
+| Job | Runner | Script | Output | Status |
+|---|---|---|---|---|
+| `macos-arm64` | macos-14 | `tools/macos/build-fritzing-mac.sh` | `Fritzing-arm64.dmg` | **validated, blocking** (release waits on it) |
+| `macos-intel` | macos-13 | same (`ARCH=x86_64`) | `Fritzing-x86_64.dmg` | best-effort, `continue-on-error`, non-blocking |
+| `windows` | windows-2022 | `tools/windows/build-fritzing-win.ps1` | `Fritzing-win-x64.zip` | **real, blocking**, still stabilizing |
+| `linux` | ubuntu-22.04 | `tools/linux/build-fritzing-linux.sh` | `Fritzing-x86_64.AppImage` | best-effort AppImage, `continue-on-error`, non-blocking |
+| `release` | ubuntu-22.04 | — | draft GitHub Release | on a `vX.Y.Z` tag; `needs: [macos-arm64, windows]` |
+
+Best-effort jobs (`macos-intel`, `linux`) are outside the release `needs` and never block it;
+their artifacts are attached to the release only if ready in time.
 
 Version pins live in the `env:` block at the top of `build.yml`. `FRITZING_REF` is a **`develop`
 commit** (Qt6 + ngspice simulator), not the old `CD-625` tag (Qt5, 2020). `QT_VERSION` must stay
@@ -41,9 +51,12 @@ shared, Clipper1 6.4.2, svgpp 1.3.1, QuaZip 1.4 at a Qt-version-encoded path).
   a single OS job locally per `docs/BUILD.md` (macOS steps are fully spelled out there).
 - **macOS is done and validated** (builds, launches, populated Parts bin, produces a signed `.dmg`).
   Debug it locally with `tools/macos/build-fritzing-mac.sh` (run from a dir containing `fritzing-app/`).
-- **Linux + Windows are still scaffolds** (`build-others` job just echoes a TODO). Porting them means
-  replaying the macOS recipe per-OS: same sibling deps (libgit2 dynamic on Linux, etc.), Qt 6.5.3,
-  `qmake phoenix.pro`, then `linuxdeployqt` / `windeployqt`. Use `tools/macos/` as the pattern.
+- **Windows and Linux now have real build scripts** but are debugged over CI runs (not testable from
+  macOS). Each replays the macOS recipe with per-OS deps: sibling dep paths/linkage differ (e.g.
+  libgit2 is **static** on macOS but **dynamic** on Linux/Windows; Windows uses `Clipper1-6.4.2` with a
+  dash and a precompiled ngspice DLL; both add a sibling `boost_1_85_0`). The exact pins live in the
+  headers of each `tools/<os>/build-*.{sh,ps1}` — read them before editing. Packaging: macOS
+  `.dmg` (ad-hoc signed), Windows `.zip` (unsigned), Linux `.AppImage` (linuxdeploy + qt plugin).
 - The Fritzing build is version-sensitive; consult the "Points sensibles connus" section of
   `docs/BUILD.md` when something breaks.
 
