@@ -20,19 +20,28 @@ Fritzing est open-source (GPLv3) : seul le binaire pré-compilé est payant. Ce 
 ### macOS — première ouverture (app **non notarisée**)
 
 Ces builds ne sont **ni signés ni notarisés** (pas de compte Apple Developer payant).
-macOS (Gatekeeper) bloquera donc le **premier** lancement. Deux façons de débloquer :
+macOS (Gatekeeper) bloque donc le **premier** lancement.
 
-**A. Le plus fiable — Terminal** (retire la mise en quarantaine) :
+> **Symptôme typique : rien ne se passe.** Sur macOS récent, l'app **ne s'ouvre pas et
+> aucune fenêtre n'apparaît** — souvent **sans aucun message d'erreur**. Ce n'est pas un
+> plantage : c'est Gatekeeper qui bloque une app téléchargée via un navigateur. Le
+> déblocage ci-dessous (méthode A) règle le problème.
+
+Faire glisser `Fritzing.app` dans **Applications**, puis débloquer :
+
+**A. Le plus fiable — Terminal** (retire la mise en quarantaine). Fonctionne **même quand
+aucun message n'apparaît** :
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/Fritzing.app
 ```
 
-(adapter le chemin si l'app n'est pas encore déplacée dans `/Applications`).
+(adapter le chemin si l'app est ailleurs que dans `/Applications`). Relancer l'app ensuite.
 
-**B. Interface** : double-cliquer l'app → le message « impossible à ouvrir » apparaît →
-**Réglages Système ▸ Confidentialité et sécurité** → bouton **« Ouvrir quand même »** →
-relancer l'app et confirmer.
+**B. Interface** : clic droit sur l'app ▸ **Ouvrir** ▸ **Ouvrir** ; ou, si un message est
+apparu, **Réglages Système ▸ Confidentialité et sécurité** ▸ **« Ouvrir quand même »**.
+Sur macOS récent ce bouton **n'apparaît pas toujours** pour une app ad-hoc — dans ce cas,
+utiliser la méthode A.
 
 > Une fois débloquée, l'app s'ouvre normalement les fois suivantes. C'est attendu pour un
 > logiciel libre auto-compilé, ce n'est pas un problème de sécurité.

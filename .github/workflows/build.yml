@@ -265,7 +265,11 @@ jobs:
             - **Windows 64-bit** : `Fritzing-win-x64.zip`
 
             ### Premier lancement (binaires non signés)
-            - **macOS** : `xattr -dr com.apple.quarantine /Applications/Fritzing.app` (ou Réglages ▸ Confidentialité ▸ « Ouvrir quand même »).
+            - **macOS** — si **rien ne s'affiche** au lancement (aucune fenêtre, souvent **sans message**), c'est Gatekeeper qui bloque l'app non notarisée. Débloquer via le Terminal (fiable même sans message) :
+              ```
+              xattr -dr com.apple.quarantine /Applications/Fritzing.app
+              ```
+              puis relancer. (Alternative : clic droit ▸ Ouvrir, ou Réglages ▸ Confidentialité et sécurité ▸ « Ouvrir quand même ».)
             - **Windows** : SmartScreen ▸ « Informations complémentaires » ▸ « Exécuter quand même ».
 
             Fritzing est sous GPLv3 ; les pièces (fritzing-parts) sous CC-BY-SA.
