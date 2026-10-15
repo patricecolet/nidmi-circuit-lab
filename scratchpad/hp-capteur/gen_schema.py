@@ -31,18 +31,18 @@ PARTS = [
     # Préampli non inverseur, gain alternatif 1 + R4/R5 ≈ 22
     ('U1',  'Amplifier_Operational', 'MCP6002-xP', 'MCP6002', 101.6, 58.42, 0, 1, {'3': '-', '2': '-', '1': '-'}),
     ('R4',  'Device', 'R',            '100k',   101.6, 68.58, 90, 1, {'1': '-', '2': '-'}),
-    ('R5',  'Device', 'R',            '4.7k',   91.44, 76.2, 0,   1, {'1': '-', '2': '-'}),
+    ('R5',  'Device', 'R',            '2.2k',   91.44, 76.2, 0,   1, {'1': '-', '2': '-'}),
     ('C3',  'Device', 'C',            '10µF',   91.44, 88.9, 0,   1, {'1': '-', '2': 'L:VBIAS'}),
     # Détecteur d'enveloppe
     ('C4',  'Device', 'C',            '1µF',    119.38, 58.42, 90, 1, {'1': '-', '2': '-'}),
-    ('R6',  'Device', 'R',            '100k',   127.0, 66.04, 0,   1, {'1': '-', '2': G}),
+    ('R6',  'Device', 'R',            '10k',    127.0, 66.04, 0,   1, {'1': '-', '2': G}),
     ('D1',  'Diode',  '1N4148',       '1N4148', 137.16, 58.42, 180, 1, {'2': '-', '1': '-'}),
     ('C5',  'Device', 'C',            '100nF',  147.32, 66.04, 0,   1, {'1': '-', '2': G}),
     ('R7',  'Device', 'R',            '220k',   157.48, 66.04, 0,   1, {'1': '-', '2': G}),
-    ('J1',  'Connector_Generic', 'Conn_01x03', 'vers XIAO ESP32-C3', 175.26, 58.42, 0, 1,
-            {'1': '-', '2': '-', '3': '-'}),
+    ('J1',  'Connector_Generic', 'Conn_01x04', 'vers XIAO ESP32-C3', 175.26, 58.42, 0, 1,
+            {'1': '-', '2': '-', '3': 'L:AMP', '4': '-'}),
     # Point milieu 1,65 V tamponné par la 2e moitié du MCP6002
-    ('R2',  'Device', 'R',            '100k',   40.64, 116.84, 0, 1, {'1': P, '2': '-'}),
+    ('R2',  'Device', 'R',            '160k',   40.64, 116.84, 0, 1, {'1': P, '2': '-'}),
     ('R3',  'Device', 'R',            '100k',   40.64, 129.54, 0, 1, {'1': '-', '2': G}),
     ('C2',  'Device', 'C',            '10µF',   50.8, 129.54, 0,  1, {'1': '-', '2': G}),
     ('U1',  'Amplifier_Operational', 'MCP6002-xP', 'MCP6002', 71.12, 125.73, 0, 2, {'5': '-', '6': '-', '7': '-'}),
@@ -67,7 +67,7 @@ WIRES = [
     [('R6', 1, '1'), (127.0, 58.42)],
     [('D1', 1, '1'), ('J1', 1, '2')],                         # ENV
     [('J1', 1, '1'), (167.64, 55.88), (167.64, 50.8)],
-    [('J1', 1, '3'), (167.64, 60.96), (167.64, 66.04)],
+    [('J1', 1, '4'), (165.1, 63.5), (165.1, 68.58)],
     [('C5', 1, '1'), (147.32, 58.42)],
     [('R7', 1, '1'), (157.48, 58.42)],
     [('R2', 1, '2'), ('R3', 1, '1')],                         # VDIV
@@ -78,18 +78,20 @@ WIRES = [
 ]
 JUNCTIONS = [(66.04, 55.88), (78.74, 55.88), (73.66, 73.66), (91.44, 68.58), (111.76, 58.42), (127.0, 58.42),
              (147.32, 58.42), (157.48, 58.42), (40.64, 123.19), (50.8, 123.19), (81.28, 125.73)]
-LABELS = [('VBIAS', 86.36, 125.73, 0), ('INP', 83.82, 55.88, 0), ('ENV', 160.02, 58.42, 0)]
-POWERS = [(G, 33.02, 63.5, 270), (P, 167.64, 50.8, 90), (G, 167.64, 66.04, 270)]
+LABELS = [('VBIAS', 86.36, 125.73, 0), ('INP', 83.82, 55.88, 0), ('ENV', 160.02, 58.42, 0),
+          ('AMP', 111.76, 63.5, 0)]
+POWERS = [(G, 33.02, 63.5, 270), (P, 167.64, 50.8, 90), (G, 165.1, 68.58, 270)]
 FLAGS = [(P, 132.08, 116.84), (G, 142.24, 116.84)]   # PWR_FLAG : l'alimentation vient de J1
 
 TEXTS = [
     (25.4, 17.78, 2.0, 'Haut-parleur capteur → enveloppe → ADC (XIAO ESP32-C3)'),
-    (25.4, 21.59, 1.27, 'Frappe / frottement de la membrane → Note On/Off + aftertouch via le composant Velostat de NiDMI.'),
-    (25.4, 25.4, 1.27, 'Gain alternatif = 1 + R4/R5 ≈ 22 (ajuster R5 : 2.2k → ×46, 10k → ×11).  Enveloppe : τ = R7·C5 ≈ 22 ms.'),
+    (25.4, 21.59, 1.27, 'Frappe de la membrane → Note On/Off + vélocité ; frottement → aftertouch (composants NiDMI).'),
+    (25.4, 25.4, 1.27, 'Gain alternatif = 1 + R4/R5 ≈ 46 (ajuster R5 : 1k → ×100, 4.7k → ×22).  Enveloppe : τ = R7·C5 ≈ 22 ms.'),
+    (25.4, 33.02, 1.27, 'Deux voies : ENV (enveloppe analogique) pour les frappes → Velostat ; AMP (préampli brut) pour le frottement → RMS logiciel → aftertouch.'),
     (25.4, 29.21, 1.27, 'D2/D3 (1N4148) limitent l\'entrée de l\'ampli à −0,6 V / +3,9 V quand on frappe fort ; R9 limite le courant.'),
-    (25.4, 105.41, 1.27, 'VBIAS = 1,65 V (milieu de l\'alimentation), tamponné par U1B'),
+    (25.4, 105.41, 1.27, 'VBIAS = 1,25 V (milieu de la plage ADC 0–2,5 V), tamponné par U1B'),
     (124.46, 86.36, 1.27, 'D1 = 1N4148 : seuil ≈ 0,5 V (porte de bruit).\nRégler velocityMax ≈ 1500–1800 dans le Velostat.'),
-    (180.34, 53.34, 1.27, 'J1 vers XIAO :\n1 = 3V3\n2 = D0 (GPIO2, ADC1)\n3 = GND'),
+    (180.34, 53.34, 1.27, 'J1 vers XIAO :\n1 = 3V3\n2 = ENV → broche D0 (GPIO2) : frappes\n3 = AMP → broche D1 (GPIO3) : frottement\n4 = GND'),
 ]
 
 def rot(x, y, r):
@@ -173,7 +175,7 @@ def ref_val_pos(name, x, y, r):
     if name == 'Speaker':
         return (x - 2.54, y - 7.62), (x - 2.54, y + 6.35)
     if name == 'Conn_01x03':
-        return (x, y - 6.35), (x + 12.7, y + 6.35)
+        return (x, y - 8.89), (x + 12.7, y + 11.43)
     return (x, y - 6.35), (x, y + 6.35)
 
 PINPOS = {}
@@ -246,8 +248,8 @@ for i, (x, y, size, txt) in enumerate(TEXTS):
 doc = ['kicad_sch', ['version', 20250114], ['generator', S('eeschema')], ['generator_version', S('9.0')],
        ['uuid', ROOT], ['paper', S('A4')],
        ['title_block', ['title', S('Haut-parleur capteur → XIAO ESP32-C3')], ['date', S('2026-10-15')],
-        ['rev', S('0.1')], ['company', S('NiDMI')],
-        ['comment', 1, S('Enveloppe pour le composant Velostat (Note On/Off + aftertouch)')]],
+        ['rev', S('0.2')], ['company', S('NiDMI')],
+        ['comment', 1, S('Deux voies : frappes (enveloppe → Velostat) + frottement (RMS logiciel → aftertouch)')]],
        ['lib_symbols', *defs.values()],
        *items, *out_syms,
        ['sheet_instances', ['path', S('/'), ['page', S('1')]]],

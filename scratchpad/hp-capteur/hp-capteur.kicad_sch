@@ -7,9 +7,9 @@
 	(title_block
 		(title "Haut-parleur capteur → XIAO ESP32-C3")
 		(date "2026-10-15")
-		(rev "0.1")
+		(rev "0.2")
 		(company "NiDMI")
-		(comment 1 "Enveloppe pour le composant Velostat (Note On/Off + aftertouch)")
+		(comment 1 "Deux voies : frappes (enveloppe → Velostat) + frottement (RMS logiciel → aftertouch)")
 	)
 	(lib_symbols
 		(symbol "Device:Speaker"
@@ -1236,7 +1236,7 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Connector_Generic:Conn_01x03"
+		(symbol "Connector_Generic:Conn_01x04"
 			(pin_names
 				(offset 1.016)
 				(hide yes)
@@ -1252,8 +1252,8 @@
 					)
 				)
 			)
-			(property "Value" "Conn_01x03"
-				(at 0 -5.08 0)
+			(property "Value" "Conn_01x04"
+				(at 0 -7.62 0)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -1278,7 +1278,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)"
+			(property "Description" "Generic connector, single row, 01x04, script generated (kicad-library-utils/schlib/autogen/connector/)"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1305,10 +1305,10 @@
 					(hide yes)
 				)
 			)
-			(symbol "Conn_01x03_1_1"
+			(symbol "Conn_01x04_1_1"
 				(rectangle
 					(start -1.27 3.81)
-					(end 1.27 -3.81)
+					(end 1.27 -6.35)
 					(stroke
 						(width 0.254)
 						(type default)
@@ -1342,6 +1342,17 @@
 				(rectangle
 					(start -1.27 -2.413)
 					(end 0 -2.667)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start -1.27 -4.953)
+					(end 0 -5.207)
 					(stroke
 						(width 0.1524)
 						(type default)
@@ -1397,6 +1408,24 @@
 						)
 					)
 					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -5.08 0)
+					(length 3.81)
+					(name "Pin_4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1536,6 +1565,17 @@
 		)
 		(uuid "077565be-6081-5728-b905-52a6ee6cf5b2")
 	)
+	(label "AMP"
+		(at 167.64 60.96 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "2fac7a2f-0eed-55b0-a689-a0beca456afe")
+	)
 	(wire
 		(pts
 			(xy 66.04 41.91)
@@ -1612,6 +1652,17 @@
 			(type default)
 		)
 		(uuid "f0e22ccb-c1f5-587c-8955-b6780332cccb")
+	)
+	(wire
+		(pts
+			(xy 170.18 60.96)
+			(xy 167.64 60.96)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a9fea558-96e2-56c6-8f26-1ba56eab4b63")
 	)
 	(wire
 		(pts
@@ -1891,13 +1942,24 @@
 	(wire
 		(pts
 			(xy 111.76 68.58)
-			(xy 111.76 58.42)
+			(xy 111.76 63.5)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "9ce67965-7cbf-5ceb-ba8b-a44bb3683eff")
+	)
+	(wire
+		(pts
+			(xy 111.76 63.5)
+			(xy 111.76 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "76cee3b0-9296-5674-914f-efe16f3d2a9d")
 	)
 	(wire
 		(pts
@@ -2033,8 +2095,8 @@
 	)
 	(wire
 		(pts
-			(xy 170.18 60.96)
-			(xy 167.64 60.96)
+			(xy 170.18 63.5)
+			(xy 165.1 63.5)
 		)
 		(stroke
 			(width 0)
@@ -2044,8 +2106,8 @@
 	)
 	(wire
 		(pts
-			(xy 167.64 60.96)
-			(xy 167.64 66.04)
+			(xy 165.1 63.5)
+			(xy 165.1 68.58)
 		)
 		(stroke
 			(width 0)
@@ -2295,6 +2357,17 @@
 		)
 		(uuid "28ed2b04-5f7c-528b-bee1-0ba27e142a7c")
 	)
+	(label "AMP"
+		(at 111.76 63.5 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "3ea53138-5ad0-517d-a7dc-932292adc9de")
+	)
 	(wire
 		(pts
 			(xy 132.08 116.84)
@@ -2328,7 +2401,7 @@
 		)
 		(uuid "2ee1b610-b3b9-560c-b94b-234ca8d2d019")
 	)
-	(text "Frappe / frottement de la membrane → Note On/Off + aftertouch via le composant Velostat de NiDMI."
+	(text "Frappe de la membrane → Note On/Off + vélocité ; frottement → aftertouch (composants NiDMI)."
 		(exclude_from_sim no)
 		(at 25.4 21.59 0)
 		(effects
@@ -2339,7 +2412,7 @@
 		)
 		(uuid "4e34296b-b025-5c76-a3d9-b32d15d41da1")
 	)
-	(text "Gain alternatif = 1 + R4/R5 ≈ 22 (ajuster R5 : 2.2k → ×46, 10k → ×11).  Enveloppe : τ = R7·C5 ≈ 22 ms."
+	(text "Gain alternatif = 1 + R4/R5 ≈ 46 (ajuster R5 : 1k → ×100, 4.7k → ×22).  Enveloppe : τ = R7·C5 ≈ 22 ms."
 		(exclude_from_sim no)
 		(at 25.4 25.4 0)
 		(effects
@@ -2350,6 +2423,17 @@
 		)
 		(uuid "0e7c835f-4fa1-50f4-a97c-f42cec192bb4")
 	)
+	(text "Deux voies : ENV (enveloppe analogique) pour les frappes → Velostat ; AMP (préampli brut) pour le frottement → RMS logiciel → aftertouch."
+		(exclude_from_sim no)
+		(at 25.4 33.02 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "6e2aa5bb-9ece-5312-88cf-2aada2d335a6")
+	)
 	(text "D2/D3 (1N4148) limitent l'entrée de l'ampli à −0,6 V / +3,9 V quand on frappe fort ; R9 limite le courant."
 		(exclude_from_sim no)
 		(at 25.4 29.21 0)
@@ -2359,9 +2443,9 @@
 			)
 			(justify left bottom)
 		)
-		(uuid "6e2aa5bb-9ece-5312-88cf-2aada2d335a6")
+		(uuid "3dfdc644-f827-582a-8558-6075023f3a43")
 	)
-	(text "VBIAS = 1,65 V (milieu de l'alimentation), tamponné par U1B"
+	(text "VBIAS = 1,25 V (milieu de la plage ADC 0–2,5 V), tamponné par U1B"
 		(exclude_from_sim no)
 		(at 25.4 105.41 0)
 		(effects
@@ -2370,7 +2454,7 @@
 			)
 			(justify left bottom)
 		)
-		(uuid "3dfdc644-f827-582a-8558-6075023f3a43")
+		(uuid "9327ec73-0fd3-53a3-af69-e044096caf6b")
 	)
 	(text "D1 = 1N4148 : seuil ≈ 0,5 V (porte de bruit).\nRégler velocityMax ≈ 1500–1800 dans le Velostat."
 		(exclude_from_sim no)
@@ -2381,9 +2465,9 @@
 			)
 			(justify left bottom)
 		)
-		(uuid "9327ec73-0fd3-53a3-af69-e044096caf6b")
+		(uuid "1d31f667-fb8d-5a58-b5c2-19b3e48189e4")
 	)
-	(text "J1 vers XIAO :\n1 = 3V3\n2 = D0 (GPIO2, ADC1)\n3 = GND"
+	(text "J1 vers XIAO :\n1 = 3V3\n2 = ENV → broche D0 (GPIO2) : frappes\n3 = AMP → broche D1 (GPIO3) : frottement\n4 = GND"
 		(exclude_from_sim no)
 		(at 180.34 53.34 0)
 		(effects
@@ -2392,7 +2476,7 @@
 			)
 			(justify left bottom)
 		)
-		(uuid "1d31f667-fb8d-5a58-b5c2-19b3e48189e4")
+		(uuid "3c279e73-4eba-5901-9dd0-2871fa31c395")
 	)
 	(symbol
 		(lib_id "Device:Speaker")
@@ -2990,7 +3074,7 @@
 				)
 			)
 		)
-		(property "Value" "4.7k"
+		(property "Value" "2.2k"
 			(at 93.98 77.47 0)
 			(effects
 				(font
@@ -3164,7 +3248,7 @@
 				)
 			)
 		)
-		(property "Value" "100k"
+		(property "Value" "10k"
 			(at 129.54 67.31 0)
 			(effects
 				(font
@@ -3548,7 +3632,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Connector_Generic:Conn_01x03")
+		(lib_id "Connector_Generic:Conn_01x04")
 		(at 175.26 58.42 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -3565,7 +3649,7 @@
 			)
 		)
 		(property "Value" "vers XIAO ESP32-C3"
-			(at 187.96 64.77 0)
+			(at 175.26 64.77 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3599,6 +3683,9 @@
 		(pin "3"
 			(uuid "f5855888-5375-5cea-9c46-24d344b983cd")
 		)
+		(pin "4"
+			(uuid "4ef21ebf-b46a-5f3f-baf9-edef750baab8")
+		)
 		(instances
 			(project "hp-capteur"
 				(path "/462643ff-c9af-55b7-87ee-4acf96ab3226"
@@ -3625,7 +3712,7 @@
 				)
 			)
 		)
-		(property "Value" "100k"
+		(property "Value" "160k"
 			(at 43.18 118.11 0)
 			(effects
 				(font
@@ -4465,7 +4552,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 167.64 66.04 0)
+		(at 165.1 68.58 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -4473,7 +4560,7 @@
 		(dnp no)
 		(uuid "70617b1f-7886-518a-be13-c23b42db30a3")
 		(property "Reference" "#PWR015"
-			(at 167.64 66.04 0)
+			(at 165.1 68.58 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4482,7 +4569,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 167.64 69.85 0)
+			(at 165.1 72.39 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4490,7 +4577,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 167.64 66.04 0)
+			(at 165.1 68.58 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4499,7 +4586,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 167.64 66.04 0)
+			(at 165.1 68.58 0)
 			(effects
 				(font
 					(size 1.27 1.27)
